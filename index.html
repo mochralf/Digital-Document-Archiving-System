@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="description" content="Demo interaktif denah arsip kontainer: pencarian box dokumen, lokasi rak, retensi. Seluruh data fiktif.">
+  <meta name="theme-color" content="#050c1d">
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="favicon-192.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Container Archive Demo</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=IBM+Plex+Sans:wght@400;500&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Overlay Login -->
+  <div id="authOverlay">
+    <form id="authBox">
+      <h2>Demo Denah Arsip</h2>
+      <p class="hint auth-sub">Ini versi demo dengan data fiktif. Gunakan salah satu akun di bawah, atau tekan tombol <b>Isi</b>.</p>
+      <label for="loginEmail">Email</label>
+      <input type="email" id="loginEmail" required autocomplete="username">
+      <label for="loginPass">Password</label>
+      <input type="password" id="loginPass" required autocomplete="current-password">
+      <div class="demo-cred">
+        <div class="cred-row"><span>Editor <small>(bisa mengubah)</small></span><code>editor@demo.id</code><code>demo-editor</code><button type="button" class="btn" data-fill="editor">Isi</button></div>
+        <div class="cred-row"><span>Pelihat <small>(hanya lihat)</small></span><code>pelihat@demo.id</code><code>demo-pelihat</code><button type="button" class="btn" data-fill="pelihat">Isi</button></div>
+      </div>
+      <div id="authErr" class="hint err-text"></div>
+      <div class="btns auth-actions">
+        <button type="submit" class="btn pri w-full" aria-pressed="true" id="loginBtn">Masuk</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Aplikasi Utama -->
+  <div id="appWrap" hidden>
+    <div class="demo-banner"><span><b>DEMO</b> · seluruh data fiktif; perubahan hanya tersimpan di browser Anda.</span><button class="btn" id="demoReset" type="button">Reset demo</button></div>
+    <header>
+      <div>
+        <h1 id="h1">Arsip Kontainer Purchasing</h1>
+        <p class="eyebrow">Interactive Document Warehouse</p>
+        <input type="text" id="titleIn" class="editonly title-input" maxlength="60" aria-label="Nama denah">
+        <p>Kelola, cari, dan pantau arsip dokumen Purchasing secara digital, cepat, dan akurat.</p>
+      </div>
+      <div class="header-actions">
+        <span id="roleBadge" class="role-badge"></span>
+        <span id="syncBadge">Tersinkronisasi</span>
+        <button class="btn" id="refreshBtn" type="button" title="Muat ulang data demo">Muat ulang</button>
+        <button class="btn pri" id="editBtn" aria-pressed="false">Ubah denah</button>
+        <button class="btn warn" id="logoutBtn" type="button">Keluar</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- Area Atas: Kiri (Statistik & Filter) + Kanan (Panduan Orientasi Rak) -->
+      <div class="top-grid">
+        <div class="top-left">
+          <div class="bar">
+            <div class="stat"><b id="sFill">0</b>box terisi</div>
+            <div class="stat"><b id="sFree">0</b>slot kosong</div>
+            <div class="stat"><b id="sCap">0</b>kapasitas</div>
+            <div class="stat"><b id="sExp">0</b>lewat retensi</div>
+            <input type="search" id="q" placeholder="Cari label, nomor, periode, catatan" aria-label="Cari box">
+          </div>
+          <div class="chips" id="chips" role="group" aria-label="Filter jenis"></div>
+          <div class="legend" id="legend"></div>
+          <p class="hint editonly no-margin">Mode ubah: seret rak ke posisi lain atau ke lajur kosong di bawah, atau atur Lajur denah di panel rak. Lajur 1 paling atas.</p>
+        </div>
+
+        <aside class="guide-card" aria-label="Panduan Orientasi Kontainer">
+          <div class="guide-head">
+            <span>Panduan Orientasi Rak</span>
+            <span>Klik perbesar</span>
+          </div>
+          <button type="button" class="guide-img-btn" id="openGuideBtn" title="Klik untuk memperbesar gambar petunjuk">
+            <img src="petunjuk-kontainer.png" alt="Ilustrasi orientasi kontainer: Baris 4 dekat Pintu hingga Baris 1 di ujung dalam, Level L1 paling atas hingga L5 paling bawah">
+          </button>
+          <div class="guide-cap">
+            <b class="cap-title">Keterangan</b>
+            <span><b>Baris 4</b> dekat Pintu</span>
+            <span><b>Baris 1</b> ujung dalam</span>
+            <span><b>L1</b> atas &rarr; <b>L5</b> bawah</span>
+          </div>
+        </aside>
+      </div>
+
+      <!-- Denah Kontainer -->
+      <div class="scroll">
+        <div class="cont" id="cont">
+          <div class="door">PINTU</div>
+          <div class="inner">
+            <div id="rows" class="rows-wrap"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel Rak & Detail Box -->
+      <div class="cols">
+        <section class="card">
+          <div class="rack-head">
+            <div><h2 id="rackTitle"></h2><div class="hint" id="rackSub"></div></div>
+            <div class="rack-tools">
+              <button class="btn" id="exportBtn" type="button">Ekspor Data (CSV)</button>
+              <button class="btn" id="fullBtn" type="button">Mode Penuh</button>
+            </div>
+          </div>
+          <div class="editonly" id="rset">
+            <div class="g2">
+              <div><label for="rName">Nama rak</label><input type="text" id="rName" maxlength="12"></div>
+              <div><label for="rRow">Lajur denah (atas ke bawah)</label><select id="rRow"></select></div>
+              <div><label for="rLv">Jumlah level (1–8)</label><input type="number" id="rLv" min="1" max="8"></div>
+              <div><label for="rSl">Slot per level (1–16)</label><input type="number" id="rSl" min="1" max="16"></div>
+            </div>
+            <div class="btns">
+              <button class="btn" id="rLeft" type="button">Geser kiri</button>
+              <button class="btn" id="rRight" type="button">Geser kanan</button>
+              <button class="btn warn" id="rDel" type="button">Hapus rak</button>
+            </div>
+          </div>
+          <div class="ew"><div class="elev" id="elev"></div></div>
+        </section>
+
+        <aside class="card" aria-live="polite" id="detail">
+          <h2>Detail box</h2>
+          <div id="dEmpty" class="hint">Pilih satu slot untuk melihat atau mengubah detailnya.</div>
+          <div id="dForm" hidden>
+            <div class="dnav">
+              <span class="hint" id="dCode"></span>
+              <span class="spacer"></span>
+              <button class="btn" id="dPrev" type="button">Box sebelumnya</button>
+              <button class="btn" id="dNext" type="button">Box berikutnya</button>
+              <button class="btn" id="dClose" type="button">Tutup</button>
+            </div>
+            <div class="fg">
+              <div><label for="fStatus">Status slot</label><select id="fStatus"><option value="1">Terisi</option><option value="0">Kosong</option></select></div>
+              <div><label for="fType">Jenis dokumen</label><select id="fType"></select></div>
+              <div><label for="fLabel">Label box</label><input type="text" id="fLabel" maxlength="40"></div>
+              <div><label for="fPeriod">Periode dokumen</label><input type="text" id="fPeriod" maxlength="60" placeholder="contoh: Agu–Okt 2026"></div>
+              <div><label for="fMoved">Tanggal dipindah</label><input type="date" id="fMoved"></div>
+              <div><label for="fRetain">Retensi sampai</label><input type="date" id="fRetain"><div class="hint" id="retHint"></div></div>
+              <div class="w3"><label for="fNote">Catatan</label><textarea id="fNote" rows="2" maxlength="400"></textarea></div>
+              <div class="w3"><label for="fIsi">Isi box (daftar berkas)</label><textarea id="fIsi" rows="8" maxlength="6000"></textarea></div>
+              <div class="w3" id="mvBox" hidden>
+                <label for="mvRack">Pindahkan box ke (rak, level, slot)</label>
+                <div class="mvrow">
+                  <select id="mvRack"></select>
+                  <select id="mvLv" aria-label="Level tujuan"></select>
+                  <select id="mvSl" aria-label="Slot tujuan"></select>
+                  <button class="btn" id="mvGo" type="button">Pindahkan</button>
+                </div>
+                <div class="hint mv-hint" id="mvMsg">Jika slot tujuan sudah terisi, kedua box saling bertukar. Box juga bisa diseret ke slot lain, atau ke kartu rak di denah.</div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- Pengaturan Jenis Dokumen (Mode Edit) -->
+      <section class="card editonly">
+        <h2>Jenis dokumen</h2>
+        <div class="hint">Ubah nama dan warna, tambah jenis baru, atau hapus. Box dari jenis yang dihapus pindah ke jenis pertama.</div>
+        <div id="tlist"></div>
+        <div class="btns">
+          <button class="btn" id="tAdd" type="button">Tambah jenis</button>
+          <button class="btn warn" id="reset" type="button">Kembalikan data demo</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- Modal Lightbox Panduan -->
+    <div id="guideModal" hidden role="dialog" aria-modal="true" aria-label="Perbesar panduan orientasi kontainer">
+      <div class="modal-inner" id="guideModalInner">
+        <div class="modal-head">
+          <b>Panduan Orientasi Kontainer Arsip</b>
+          <button type="button" class="btn" id="closeGuideBtn">Tutup</button>
+        </div>
+        <img src="petunjuk-kontainer.png" alt="Ilustrasi orientasi kontainer arsip">
+        <div class="hint">
+          <b>Baris 4</b> berada di sisi paling dekat dengan <b>Pintu</b> kontainer, sedangkan <b>Baris 1</b> berada di ujung terdalam. Tingkat rak diurutkan dari <b>L1</b> (paling atas) hingga <b>L5</b> (paling bawah).
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
